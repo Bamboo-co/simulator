@@ -6,45 +6,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>軽貨物ドライバー収支シミュレーター</title>
   <style>
-    body { font-family: sans-serif; padding: 2rem; background: #f9f9f9; }
-    h1 { color: #2c3e50; }
-    label, input { display: block; margin-bottom: 1rem; }
-    input[type='number'] { width: 200px; padding: 0.5rem; }
-    .result { margin-top: 2rem; font-size: 1.2rem; font-weight: bold; }
+    body { font-family: sans-serif; padding: 1.5rem; background: #f4f4f4; }
+    h1 { color: #2c3e50; font-size: 1.5rem; margin-bottom: 1rem; }
+    label { display: block; margin: 0.8rem 0 0.3rem; }
+    input[type="number"], input[type="date"] {
+      padding: 0.5rem; width: 100%; max-width: 250px; font-size: 1rem;
+    }
+    button { margin-top: 1rem; padding: 0.6rem 1.2rem; font-size: 1rem; }
+    table { width: 100%; margin-top: 2rem; border-collapse: collapse; }
+    th, td { padding: 0.5rem; border: 1px solid #ccc; text-align: center; }
+    .chart-container { margin-top: 2rem; }
   </style>
 </head>
 <body>
   <h1>📦 軽貨物ドライバー収支シミュレーター</h1>
 
-  <label>配達件数（1日）: <input type="number" id="deliveries" value="100" /></label>
+  <label>日付: <input type="date" id="date" /></label>
+  <label>配達件数: <input type="number" id="deliveries" value="100" /></label>
   <label>単価（円）: <input type="number" id="unitPrice" value="160" /></label>
   <label>ロイヤリティ（％）: <input type="number" id="royalty" value="10" /></label>
   <label>ガソリン代（円）: <input type="number" id="fuelCost" value="0" /></label>
   <label>その他経費（円）: <input type="number" id="otherCost" value="0" /></label>
+  <button onclick="saveRecord()">💾 記録を保存</button>
 
-  <div class="result" id="result">👉 収支を計算します…</div>
+  <div class="result" id="resultArea"></div>
+  <table id="recordTable">
+    <thead>
+      <tr><th>日付</th><th>件数</th><th>売上</th><th>収支</th><th>操作</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <script>
-    function calculate() {
-      const deliveries = parseFloat(document.getElementById('deliveries').value) || 0;
-      const unitPrice = parseFloat(document.getElementById('unitPrice').value) || 0;
-      const royalty = parseFloat(document.getElementById('royalty').value) || 0;
-      const fuelCost = parseFloat(document.getElementById('fuelCost').value) || 0;
-      const otherCost = parseFloat(document.getElementById('otherCost').value) || 0;
+    const storageKey = "deliveryRecords";
+
+    function saveRecord() {
+      const date = document.getElementById("date").value;
+      const deliveries = parseInt(document.getElementById("deliveries").value) || 0;
+      const unitPrice = parseFloat(document.getElementById("unitPrice").value) || 0;
+      const royalty = parseFloat(document.getElementById("royalty").value) || 0;
+      const fuel = parseFloat(document.getElementById("fuelCost").value) || 0;
+      const other = parseFloat(document.getElementById("otherCost").value) || 0;
+
+      if (!date) return alert("日付を入力してください。");
 
       const gross = deliveries * unitPrice;
       const royaltyAmount = gross * (royalty / 100);
-      const net = gross - royaltyAmount - fuelCost - otherCost;
+      const net = gross - royaltyAmount - fuel - other;
 
-      document.getElementById('result').innerText =
-        `✅ 日収支：${net.toLocaleString()} 円（売上：${gross.toLocaleString()} 円）`;
+      const record = { date, deliveries, gross, net };
+      const records = JSON.parse(localStorage.getItem(storageKey) || "[]");
+
+      const existingIndex = records.findIndex(r => r.date === date);
+      if (existingIndex !== -1) records.splice(existingIndex, 1);
+
+      records.push(record);
+      localStorage.setItem(storageKey, JSON.stringify(records));
+      renderTable();
     }
 
-    document.querySelectorAll("input").forEach(input => {
-      input.addEventListener("input", calculate);
-    });
+    function renderTable() {
+      const records = JSON.parse(localStorage.getItem(storageKey) || "[]").sort((a,b)=>a.date.localeCompare(b.date));
+      const tbody = document.querySelector("#recordTable tbody");
+      tbody.innerHTML = "";
 
-    calculate();
+      for (const record of records) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${record.date}</td>
+          <td>${record.deliveries}</td>
+          <td>${record.gross.toLocaleString()}</td>
+          <td>${record.net.toLocaleString()}</td>
+          <td><button onclick="deleteRecord('${record.date}')">🗑️</button></td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    function deleteRecord(date) {
+      let records = JSON.parse(localStorage.getItem(storageKey) || "[]");
+      records = records.filter(r => r.date !== date);
+      localStorage.setItem(storageKey, JSON.stringify(records));
+      renderTable();
+    }
+
+    renderTable();
   </script>
 </body>
 </html>
