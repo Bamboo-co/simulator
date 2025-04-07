@@ -15,7 +15,7 @@
     button { margin-top: 1rem; padding: 0.6rem 1.2rem; font-size: 1rem; }
     table { width: 100%; margin-top: 2rem; border-collapse: collapse; }
     th, td { padding: 0.5rem; border: 1px solid #ccc; text-align: center; }
-    .chart-container { margin-top: 2rem; }
+    .summary { margin-top: 2rem; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -29,7 +29,8 @@
   <label>その他経費（円）: <input type="number" id="otherCost" value="0" /></label>
   <button onclick="saveRecord()">💾 記録を保存</button>
 
-  <div class="result" id="resultArea"></div>
+  <div class="summary" id="monthlySummary"></div>
+
   <table id="recordTable">
     <thead>
       <tr><th>日付</th><th>件数</th><th>売上</th><th>収支</th><th>操作</th></tr>
@@ -54,21 +55,33 @@
       const royaltyAmount = gross * (royalty / 100);
       const net = gross - royaltyAmount - fuel - other;
 
-      const record = { date, deliveries, gross, net };
-      const records = JSON.parse(localStorage.getItem(storageKey) || "[]");
+      const record = { date, deliveries, gross, net, unitPrice, royalty, fuel, other };
+      let records = JSON.parse(localStorage.getItem(storageKey) || "[]");
 
       const existingIndex = records.findIndex(r => r.date === date);
-      if (existingIndex !== -1) records.splice(existingIndex, 1);
+      if (existingIndex !== -1) records[existingIndex] = record;
+      else records.push(record);
 
-      records.push(record);
       localStorage.setItem(storageKey, JSON.stringify(records));
       renderTable();
     }
 
+    function loadToForm(record) {
+      document.getElementById("date").value = record.date;
+      document.getElementById("deliveries").value = record.deliveries;
+      document.getElementById("unitPrice").value = record.unitPrice;
+      document.getElementById("royalty").value = record.royalty;
+      document.getElementById("fuelCost").value = record.fuel;
+      document.getElementById("otherCost").value = record.other;
+    }
+
     function renderTable() {
-      const records = JSON.parse(localStorage.getItem(storageKey) || "[]").sort((a,b)=>a.date.localeCompare(b.date));
+      let records = JSON.parse(localStorage.getItem(storageKey) || "[]").sort((a,b)=>a.date.localeCompare(b.date));
       const tbody = document.querySelector("#recordTable tbody");
       tbody.innerHTML = "";
+
+      let totalGross = 0, totalNet = 0;
+      const currentMonth = new Date().toISOString().slice(0, 7);
 
       for (const record of records) {
         const tr = document.createElement("tr");
@@ -77,10 +90,21 @@
           <td>${record.deliveries}</td>
           <td>${record.gross.toLocaleString()}</td>
           <td>${record.net.toLocaleString()}</td>
-          <td><button onclick="deleteRecord('${record.date}')">🗑️</button></td>
+          <td>
+            <button onclick='loadToForm(${JSON.stringify(record)})'>✏️</button>
+            <button onclick="deleteRecord('${record.date}')">🗑️</button>
+          </td>
         `;
         tbody.appendChild(tr);
+
+        if (record.date.startsWith(currentMonth)) {
+          totalGross += record.gross;
+          totalNet += record.net;
+        }
       }
+
+      document.getElementById("monthlySummary").innerText =
+        `🧾 今月の合計 → 売上: ${totalGross.toLocaleString()} 円 ／ 収支: ${totalNet.toLocaleString()} 円`;
     }
 
     function deleteRecord(date) {
