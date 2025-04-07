@@ -3,11 +3,48 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>軽貨物ドライバー収支シミュレーター</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; background: #f9f9f9; }
+    h1 { color: #2c3e50; }
+    label, input { display: block; margin-bottom: 1rem; }
+    input[type='number'] { width: 200px; padding: 0.5rem; }
+    .result { margin-top: 2rem; font-size: 1.2rem; font-weight: bold; }
+  </style>
 </head>
 <body>
-  <h1>📊 軽貨物ドライバー収支シミュレーター</h1>
-  <p>これはGitHub Pages上で動作するテスト版です。</p>
+  <h1>📦 軽貨物ドライバー収支シミュレーター</h1>
+
+  <label>配達件数（1日）: <input type="number" id="deliveries" value="100" /></label>
+  <label>単価（円）: <input type="number" id="unitPrice" value="160" /></label>
+  <label>ロイヤリティ（％）: <input type="number" id="royalty" value="10" /></label>
+  <label>ガソリン代（円）: <input type="number" id="fuelCost" value="0" /></label>
+  <label>その他経費（円）: <input type="number" id="otherCost" value="0" /></label>
+
+  <div class="result" id="result">👉 収支を計算します…</div>
+
+  <script>
+    function calculate() {
+      const deliveries = parseFloat(document.getElementById('deliveries').value) || 0;
+      const unitPrice = parseFloat(document.getElementById('unitPrice').value) || 0;
+      const royalty = parseFloat(document.getElementById('royalty').value) || 0;
+      const fuelCost = parseFloat(document.getElementById('fuelCost').value) || 0;
+      const otherCost = parseFloat(document.getElementById('otherCost').value) || 0;
+
+      const gross = deliveries * unitPrice;
+      const royaltyAmount = gross * (royalty / 100);
+      const net = gross - royaltyAmount - fuelCost - otherCost;
+
+      document.getElementById('result').innerText =
+        `✅ 日収支：${net.toLocaleString()} 円（売上：${gross.toLocaleString()} 円）`;
+    }
+
+    document.querySelectorAll("input").forEach(input => {
+      input.addEventListener("input", calculate);
+    });
+
+    calculate();
+  </script>
 </body>
 </html>
